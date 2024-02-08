@@ -113,6 +113,9 @@ pub struct PlatformConfig {
     #[cfg(feature = "sev_snp")]
     #[serde(default)]
     pub sev_snp: bool,
+    #[cfg(feature = "arm_rme")]
+    #[serde(default)]
+    pub arm_rme: bool,
 }
 
 pub const DEFAULT_PCI_SEGMENT_APERTURE_WEIGHT: u32 = 1;

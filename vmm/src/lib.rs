@@ -872,6 +872,8 @@ impl Vmm {
             false,
             #[cfg(feature = "sev_snp")]
             config.lock().unwrap().memory.total_size(),
+            #[cfg(feature = "arm_rme")]
+            false,
         )
         .map_err(|e| {
             MigratableError::MigrateReceive(anyhow!(
@@ -889,6 +891,8 @@ impl Vmm {
             None,
             phys_bits,
             #[cfg(feature = "tdx")]
+            false,
+            #[cfg(feature = "arm_rme")]
             false,
             Some(&vm_migration_config.memory_manager_data),
             existing_memory_files,

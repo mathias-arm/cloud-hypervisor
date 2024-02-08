@@ -819,6 +819,13 @@ impl Vm {
             vm_config.lock().unwrap().is_sev_snp_enabled()
         };
 
+        #[cfg(feature = "arm_rme")]
+        let arm_rme_enabled = if snapshot.is_some() {
+            false
+        } else {
+            vm_config.lock().unwrap().is_arm_rme_enabled()
+        };
+
         let vm = Self::create_hypervisor_vm(
             &hypervisor,
             #[cfg(feature = "tdx")]
@@ -827,6 +834,8 @@ impl Vm {
             sev_snp_enabled,
             #[cfg(feature = "sev_snp")]
             vm_config.lock().unwrap().memory.total_size(),
+            #[cfg(feature = "arm_rme")]
+            arm_rme_enabled,
         )?;
 
         let phys_bits = physical_bits(&hypervisor, vm_config.lock().unwrap().cpus.max_phys_bits);
@@ -854,6 +863,8 @@ impl Vm {
                 phys_bits,
                 #[cfg(feature = "tdx")]
                 tdx_enabled,
+                #[cfg(feature = "arm_rme")]
+                arm_rme_enabled,
                 None,
                 None,
                 #[cfg(target_arch = "x86_64")]
@@ -886,6 +897,7 @@ impl Vm {
         #[cfg(feature = "tdx")] tdx_enabled: bool,
         #[cfg(feature = "sev_snp")] sev_snp_enabled: bool,
         #[cfg(feature = "sev_snp")] mem_size: u64,
+        #[cfg(feature = "arm_rme")] arm_rme_enabled: bool,
     ) -> Result<Arc<dyn hypervisor::Vm>> {
         hypervisor.check_required_extensions().unwrap();
 
@@ -903,6 +915,10 @@ impl Vm {
                 // value of sev_snp_enabled is mapped to SEV_SNP_ENABLED for true or SEV_SNP_DISABLED for false
                 let vm = hypervisor
                     .create_vm_with_type_and_memory(u64::from(sev_snp_enabled), mem_size)
+                    .unwrap();
+            } else if #[cfg(feature = "arm_rme")] {
+                let vm = hypervisor
+                    .create_vm_with_type_and_memory(u64::from(arm_rme_enabled))
                     .unwrap();
             } else {
                 let vm = hypervisor.create_vm().unwrap();
@@ -2159,6 +2175,11 @@ impl Vm {
         // Resume the vm for MSHV
         if current_state == VmState::Created {
             self.vm.resume().map_err(Error::ResumeVm)?;
+        }
+
+        #[cfg(feature = "arm_rme")]
+        if self.config.lock().unwrap().is_arm_rme_enabled() {
+            todo!("finalize realm");
         }
 
         self.cpu_manager

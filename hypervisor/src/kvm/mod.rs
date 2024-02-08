@@ -145,6 +145,11 @@ const KVM_X86_TDX_VM: u64 = 1;
 #[cfg(feature = "tdx")]
 ioctl_iowr_nr!(KVM_MEMORY_ENCRYPT_OP, KVMIO, 0xba, std::os::raw::c_ulong);
 
+#[cfg(target_arch = "aarch64")]
+const KVM_VM_TYPE_ARM_NORMAL: u64 = 0 << 8;
+#[cfg(target_arch = "aarch64")]
+const KVM_VM_TYPE_ARM_REALM: u64 = 1 << 8;
+
 #[cfg(feature = "tdx")]
 #[repr(u32)]
 enum TdxCommand {
@@ -480,6 +485,8 @@ pub struct KvmVm {
     #[cfg(target_arch = "x86_64")]
     msrs: Vec<MsrEntry>,
     dirty_log_slots: Arc<RwLock<HashMap<u32, KvmDirtyLogSlot>>>,
+    #[cfg(target_arch = "aarch64")]
+    arm_rme_enabled: bool,
 }
 
 impl KvmVm {
@@ -579,6 +586,8 @@ impl vm::Vm for KvmVm {
             vm_ops,
             #[cfg(target_arch = "x86_64")]
             hyperv_synic: AtomicBool::new(false),
+            #[cfg(target_arch = "aarch64")]
+            arm_rme_enabled: self.arm_rme_enabled,
         };
         Ok(Arc::new(vcpu))
     }
@@ -1186,13 +1195,21 @@ impl hypervisor::Hypervisor for KvmHypervisor {
             vm_type = KVM_X86_DEFAULT_VM as u64;
         }
 
+        #[cfg(target_arch = "aarch64")]
+        let confidential = vm_type == KVM_VM_TYPE_ARM_REALM;
+
         // When KVM supports Cap::ArmVmIPASize, it is better to get the IPA
         // size from the host and use that when creating the VM, which may
         // avoid unnecessary VM creation failures.
         #[cfg(target_arch = "aarch64")]
         {
             if self.kvm.check_extension(Cap::ArmVmIPASize) {
-                let ipa_size: u64 = self.kvm.get_host_ipa_limit().try_into().unwrap();
+                let mut ipa_size: u64 = self.kvm.get_host_ipa_limit().try_into().unwrap();
+                // FIXME: RMM doesn't support 52-bit at the moment, and we can't discover that
+                // without a VM!
+                if confidential && ipa_size > 48 {
+                    ipa_size = 48;
+                }
                 vm_type |= ipa_size;
             }
         }
@@ -1243,6 +1260,8 @@ impl hypervisor::Hypervisor for KvmHypervisor {
             Ok(Arc::new(KvmVm {
                 fd: vm_fd,
                 dirty_log_slots: Arc::new(RwLock::new(HashMap::new())),
+                #[cfg(target_arch = "aarch64")]
+                arm_rme_enabled: confidential,
             }))
         }
     }
@@ -1339,6 +1358,8 @@ pub struct KvmVcpu {
     vm_ops: Option<Arc<dyn vm::VmOps>>,
     #[cfg(target_arch = "x86_64")]
     hyperv_synic: AtomicBool,
+    #[cfg(target_arch = "aarch64")]
+    arm_rme_enabled: bool,
 }
 
 /// Implementation of Vcpu trait for KVM

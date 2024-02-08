@@ -1164,6 +1164,20 @@ impl hypervisor::Hypervisor for KvmHypervisor {
     /// ```
     fn create_vm_with_type(&self, vm_type: u64) -> hypervisor::Result<Arc<dyn vm::Vm>> {
         let fd: VmFd;
+        #[allow(unused_mut)]
+        let mut vm_type = vm_type;
+
+        // When KVM supports Cap::ArmVmIPASize, it is better to get the IPA
+        // size from the host and use that when creating the VM, which may
+        // avoid unnecessary VM creation failures.
+        #[cfg(target_arch = "aarch64")]
+        {
+            if self.kvm.check_extension(Cap::ArmVmIPASize) {
+                let ipa_size: u64 = self.kvm.get_host_ipa_limit().try_into().unwrap();
+                vm_type |= ipa_size;
+            }
+        }
+
         loop {
             match self.kvm.create_vm_with_type(vm_type) {
                 Ok(res) => fd = res,
@@ -1225,18 +1239,7 @@ impl hypervisor::Hypervisor for KvmHypervisor {
     /// let vm = hypervisor.create_vm().unwrap();
     /// ```
     fn create_vm(&self) -> hypervisor::Result<Arc<dyn vm::Vm>> {
-        #[allow(unused_mut)]
-        let mut vm_type: u64 = 0; // Create with default platform type
-
-        // When KVM supports Cap::ArmVmIPASize, it is better to get the IPA
-        // size from the host and use that when creating the VM, which may
-        // avoid unnecessary VM creation failures.
-        #[cfg(target_arch = "aarch64")]
-        if self.kvm.check_extension(Cap::ArmVmIPASize) {
-            vm_type = self.kvm.get_host_ipa_limit().try_into().unwrap();
-        }
-
-        self.create_vm_with_type(vm_type)
+        self.create_vm_with_type(0)
     }
 
     fn check_required_extensions(&self) -> hypervisor::Result<()> {

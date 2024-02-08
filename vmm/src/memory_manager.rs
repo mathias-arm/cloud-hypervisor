@@ -988,6 +988,7 @@ impl MemoryManager {
         prefault: Option<bool>,
         phys_bits: u8,
         #[cfg(feature = "tdx")] tdx_enabled: bool,
+        #[cfg(feature = "arm_rme")] arm_rme_enabled: bool,
         restore_data: Option<&MemoryManagerSnapshotData>,
         existing_memory_files: Option<HashMap<u32, File>>,
         #[cfg(target_arch = "x86_64")] sgx_epc_config: Option<Vec<SgxEpcConfig>>,
@@ -1275,6 +1276,8 @@ impl MemoryManager {
                 Some(prefault),
                 phys_bits,
                 #[cfg(feature = "tdx")]
+                false,
+                #[cfg(feature = "arm_rme")]
                 false,
                 Some(&mem_snapshot),
                 None,

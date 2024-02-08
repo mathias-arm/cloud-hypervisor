@@ -11,6 +11,7 @@ mshv = ["mshv-bindings", "mshv-ioctls", "mshv_emulator", "vfio-ioctls/mshv"]
 mshv_emulator = ["iced-x86", "mshv-bindings"]
 sev_snp = ["igvm", "igvm_defs"]
 tdx = []
+arm_rme = []
 
 [dependencies]
 anyhow = "1.0.94"

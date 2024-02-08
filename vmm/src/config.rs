@@ -831,6 +831,8 @@ impl PlatformConfig {
         parser.add("tdx");
         #[cfg(feature = "sev_snp")]
         parser.add("sev_snp");
+        #[cfg(feature = "arm_rme")]
+        parser.add("arm_rme");
         parser.parse(platform).map_err(Error::ParsePlatform)?;
 
         let num_pci_segments: u16 = parser
@@ -865,6 +867,12 @@ impl PlatformConfig {
             .map_err(Error::ParsePlatform)?
             .unwrap_or(Toggle(false))
             .0;
+        #[cfg(feature = "arm_rme")]
+        let arm_rme = parser
+            .convert::<Toggle>("arm_rme")
+            .map_err(Error::ParsePlatform)?
+            .unwrap_or(Toggle(false))
+            .0;
         Ok(PlatformConfig {
             num_pci_segments,
             iommu_segments,
@@ -876,6 +884,8 @@ impl PlatformConfig {
             tdx,
             #[cfg(feature = "sev_snp")]
             sev_snp,
+            #[cfg(feature = "arm_rme")]
+            arm_rme,
         })
     }
 
@@ -3082,6 +3092,11 @@ impl VmConfig {
     pub fn is_sev_snp_enabled(&self) -> bool {
         self.platform.as_ref().map(|p| p.sev_snp).unwrap_or(false)
     }
+
+    #[cfg(feature = "arm_rme")]
+    pub fn is_arm_rme_enabled(&self) -> bool {
+        self.platform.as_ref().map(|p| p.arm_rme).unwrap_or(false)
+    }
 }
 
 impl Clone for VmConfig {
@@ -4024,6 +4039,8 @@ mod tests {
             tdx: false,
             #[cfg(feature = "sev_snp")]
             sev_snp: false,
+            #[cfg(feature = "arm_rme")]
+            arm_rme: false,
         }
     }
 

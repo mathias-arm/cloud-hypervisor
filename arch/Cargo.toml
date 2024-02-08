@@ -9,6 +9,7 @@ default = []
 kvm = ["hypervisor/kvm"]
 sev_snp = []
 tdx = []
+arm_rme = []
 
 [dependencies]
 anyhow = "1.0.94"

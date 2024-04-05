@@ -50,6 +50,9 @@ vmm = { path = "vmm" }
 vmm-sys-util = { workspace = true }
 zbus = { version = "4.4.0", optional = true }
 
+[patch.crates-io]
+kvm-bindings = { git = "https://git.codelinaro.org/linaro/dcap/rust-vmm/kvm-bindings.git", branch = "cca/v2" }
+
 [dev-dependencies]
 dirs = "6.0.0"
 net_util = { path = "net_util" }

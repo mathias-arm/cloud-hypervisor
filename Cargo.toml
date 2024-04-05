@@ -50,6 +50,10 @@ vmm = { path = "vmm" }
 vmm-sys-util = { workspace = true }
 zbus = { version = "4.4.0", optional = true }
 
+[patch.crates-io]
+kvm-ioctls = { git = "https://github.com/rust-vmm/kvm.git", branch = "main" }
+kvm-bindings = { git = "https://github.com/rust-vmm/kvm.git", branch = "main" }
+
 [dev-dependencies]
 dirs = "6.0.0"
 net_util = { path = "net_util" }
@@ -103,8 +107,8 @@ members = [
 
 [workspace.dependencies]
 acpi_tables = { git = "https://github.com/rust-vmm/acpi_tables", branch = "main" }
-kvm-bindings = "0.10.0"
-kvm-ioctls = "0.19.1"
+kvm-bindings = "0.11.0"
+kvm-ioctls = "0.20.0"
 linux-loader = "0.13.0"
 mshv-bindings = "0.3.3"
 mshv-ioctls = "0.3.3"

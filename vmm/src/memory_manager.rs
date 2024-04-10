@@ -160,6 +160,13 @@ struct ArchMemRegion {
     r_type: RegionType,
 }
 
+pub struct GuestBootDataRegion {
+    /// Size of the region
+    pub size: usize,
+    /// Is it populated with data, or is it BSS
+    pub populate: bool,
+}
+
 pub struct MemoryManager {
     boot_guest_memory: GuestMemoryMmap,
     guest_memory: GuestMemoryAtomic<GuestMemoryMmap>,
@@ -196,6 +203,9 @@ pub struct MemoryManager {
     // This is useful for getting the dirty pages as we need to know the
     // slots that the mapping is created in.
     guest_ram_mappings: Vec<GuestRamMapping>,
+
+    // A sorted list of guest memory regions that contain data at boot
+    pub boot_data: BTreeMap<GuestAddress, GuestBootDataRegion>,
 
     pub acpi_address: Option<GuestAddress>,
     #[cfg(target_arch = "aarch64")]
@@ -342,6 +352,9 @@ pub enum Error {
 
     /// Memory size is misaligned with default page size or its hugepage size
     MisalignedMemorySize,
+
+    /// Boot regions overlaps another
+    BootRegionOverlaps,
 }
 
 const ENABLE_FLAG: usize = 0;
@@ -1228,6 +1241,7 @@ impl MemoryManager {
             snapshot_memory_ranges: MemoryRangeTable::default(),
             memory_zones,
             guest_ram_mappings: Vec::new(),
+            boot_data: BTreeMap::new(),
             acpi_address,
             log_dirty: dynamic, // Cannot log dirty pages on a TD
             arch_mem_regions,
@@ -1661,6 +1675,28 @@ impl MemoryManager {
         self.add_region(Arc::clone(&region))?;
 
         Ok(region)
+    }
+
+    /// Add a boot data region
+    pub fn log_boot_data(
+        &mut self,
+        addr: GuestAddress,
+        size: usize,
+        populate: bool,
+    ) -> Result<(), Error> {
+        let region = GuestBootDataRegion { size, populate };
+        if self.boot_data.insert(addr, region).is_some() {
+            Err(Error::BootRegionOverlaps)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Iterator on the sorted boot data list
+    pub fn boot_data(
+        &self,
+    ) -> std::collections::btree_map::Iter<GuestAddress, GuestBootDataRegion> {
+        self.boot_data.borrow().iter()
     }
 
     fn hotplug_ram_region(&mut self, size: usize) -> Result<Arc<GuestRegionMmap>, Error> {

@@ -16,7 +16,6 @@ use std::collections::HashMap;
 use std::fs::File;
 #[cfg(target_arch = "x86_64")]
 use std::os::unix::io::AsRawFd;
-#[cfg(feature = "tdx")]
 use std::os::unix::io::RawFd;
 use std::result;
 #[cfg(target_arch = "x86_64")]
@@ -99,11 +98,12 @@ use kvm_bindings::{
     KVM_CAP_ARM_RME_INIT_RIPAS_REALM, KVM_CAP_ARM_RME_POPULATE_REALM,
 };
 pub use kvm_bindings::{
-    kvm_clock_data, kvm_create_device, kvm_create_device as CreateDevice,
+    kvm_clock_data, kvm_create_device, kvm_create_device as CreateDevice, kvm_create_guest_memfd,
     kvm_device_attr as DeviceAttr, kvm_device_type_KVM_DEV_TYPE_VFIO, kvm_enable_cap,
     kvm_guest_debug, kvm_irq_routing, kvm_irq_routing_entry, kvm_mp_state, kvm_run,
-    kvm_userspace_memory_region, KVM_GUESTDBG_ENABLE, KVM_GUESTDBG_SINGLESTEP,
-    KVM_IRQ_ROUTING_IRQCHIP, KVM_IRQ_ROUTING_MSI, KVM_MEM_LOG_DIRTY_PAGES, KVM_MEM_READONLY,
+    kvm_userspace_memory_region, kvm_userspace_memory_region2, KVM_GUESTDBG_ENABLE,
+    KVM_GUESTDBG_SINGLESTEP, KVM_IRQ_ROUTING_IRQCHIP, KVM_IRQ_ROUTING_MSI,
+    KVM_MEMORY_EXIT_FLAG_PRIVATE, KVM_MEM_GUEST_MEMFD, KVM_MEM_LOG_DIRTY_PAGES, KVM_MEM_READONLY,
     KVM_MSI_VALID_DEVID,
 };
 #[cfg(target_arch = "aarch64")]
@@ -1197,6 +1197,31 @@ impl vm::Vm for KvmVm {
         self.fd
             .enable_cap(&cap)
             .map_err(|e| vm::HypervisorVmError::ActivateRealm(e.into()))
+    }
+
+    /// Create a guest memfd
+    fn create_guest_memfd(&self, size: u64) -> vm::Result<RawFd> {
+        let create_guest_memfd = kvm_create_guest_memfd {
+            size,
+            flags: 0,
+            ..Default::default()
+        };
+
+        // All these capabilities are required to manage a guest memfd
+        if !self.check_extension(Cap::UserMemory2) {
+            return Err(vm::HypervisorVmError::CreateGuestMemfd(anyhow!(
+                "Unsupported KVM_CAP_USER_MEMORY2"
+            )));
+        } else if !self.check_extension(Cap::GuestMemfd) {
+            return Err(vm::HypervisorVmError::CreateGuestMemfd(anyhow!(
+                "Unsupported KVM_CAP_GUEST_MEMFD"
+            )));
+        }
+        // TODO: private memory attribute cap
+
+        self.fd
+            .create_guest_memfd(create_guest_memfd)
+            .map_err(|e| vm::HypervisorVmError::CreateGuestMemfd(e.into()))
     }
 
     /// Downcast to the underlying KvmVm type

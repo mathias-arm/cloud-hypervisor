@@ -1053,6 +1053,44 @@ impl vm::Vm for KvmVm {
             .map_err(|e| vm::HypervisorVmError::CreateRealm(e.into()))
     }
 
+    //
+    // Register guest RAM regions to be initialized by the Realm
+    //
+    #[cfg(feature = "arm_rme")]
+    fn arm_rme_realm_populate(&self, addr: u64, size: u64, populate: bool) -> vm::Result<()> {
+        let mut cap = kvm_enable_cap {
+            cap: KVM_CAP_ARM_RME,
+            ..Default::default()
+        };
+
+        let aligned_addr = addr & !0xfff;
+        let aligned_size = (size + 0xfff) & !0xfff;
+
+        let (cmd, argp) = if populate {
+            let arg = kvm_cap_arm_rme_populate_realm_args {
+                populate_ipa_base: aligned_addr,
+                populate_ipa_size: aligned_size,
+                flags: KVM_ARM_RME_POPULATE_FLAGS_MEASURE,
+                ..Default::default()
+            };
+            (KVM_CAP_ARM_RME_POPULATE_REALM, &arg as *const _ as u64)
+        } else {
+            let arg = kvm_cap_arm_rme_init_ipa_args {
+                init_ipa_base: aligned_addr,
+                init_ipa_size: aligned_size,
+                ..Default::default()
+            };
+            (KVM_CAP_ARM_RME_INIT_IPA_REALM, &arg as *const _ as u64)
+        };
+
+        cap.args[0] = cmd as u64;
+        cap.args[1] = argp;
+
+        self.fd
+            .enable_cap(&cap)
+            .map_err(|e| vm::HypervisorVmError::PopulateRealm(e.into()))
+    }
+
     ///
     /// Finalize the configuration of the Realm
     ///

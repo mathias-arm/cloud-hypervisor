@@ -137,6 +137,12 @@ pub enum HypervisorVmError {
     #[error("Failed to create Realm Descriptor")]
     CreateRealm(#[source] anyhow::Error),
     ///
+    /// Populate Realm error
+    ///
+    #[cfg(feature = "arm_rme")]
+    #[error("Failed to populate Realm: {0}")]
+    PopulateRealm(#[source] anyhow::Error),
+    ///
     /// Activate Realm error
     ///
     #[cfg(feature = "arm_rme")]
@@ -411,6 +417,11 @@ pub trait Vm: Send + Sync + Any {
     // Configure the Realm and create the Realm Descriptor
     fn arm_rme_realm_create(&self) -> Result<()> {
         unimplemented!();
+    }
+    #[cfg(feature = "arm_rme")]
+    /// populate guest memory
+    fn arm_rme_realm_populate(&self, _addr: u64, _size: u64, _populate: bool) -> Result<()> {
+        unimplemented!()
     }
     #[cfg(feature = "arm_rme")]
     /// Finalize the configuration of the Realm

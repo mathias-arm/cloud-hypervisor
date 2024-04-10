@@ -156,6 +156,8 @@ ioctl_iowr_nr!(KVM_MEMORY_ENCRYPT_OP, KVMIO, 0xba, std::os::raw::c_ulong);
 const KVM_VM_TYPE_ARM_NORMAL: u64 = 0 << 8;
 #[cfg(target_arch = "aarch64")]
 const KVM_VM_TYPE_ARM_REALM: u64 = 1 << 8;
+#[cfg(feature = "arm_rme")]
+const KVM_ARM_RME_POPULATE_FLAGS_MEASURE: u32 = 1 << 0;
 
 #[cfg(feature = "tdx")]
 #[repr(u32)]
@@ -1051,6 +1053,59 @@ impl vm::Vm for KvmVm {
         self.fd
             .enable_cap(&cap)
             .map_err(|e| vm::HypervisorVmError::CreateRealm(e.into()))
+    }
+
+    //
+    // Register guest RAM regions to be initialized by the Realm
+    //
+    #[cfg(feature = "arm_rme")]
+    fn arm_rme_realm_populate(&self, addr: u64, size: u64, populate: bool) -> vm::Result<()> {
+        let aligned_addr = addr & !0xfff;
+        let aligned_size = (size + 0xfff) & !0xfff;
+
+        if populate {
+            let arg = arm_rme_populate_realm {
+                base: aligned_addr,
+                size: aligned_size,
+                flags: KVM_ARM_RME_POPULATE_FLAGS_MEASURE,
+                ..Default::default()
+            };
+
+            let cap = kvm_enable_cap {
+                cap: KVM_CAP_ARM_RME,
+                args: [
+                    KVM_CAP_ARM_RME_POPULATE_REALM as u64,
+                    &arg as *const _ as u64,
+                    0,
+                    0,
+                ],
+                ..Default::default()
+            };
+
+            self.fd
+                .enable_cap(&cap)
+                .map_err(|e| vm::HypervisorVmError::PopulateRealm(e.into()))
+        } else {
+            let arg = arm_rme_init_ripas {
+                base: aligned_addr,
+                size: aligned_size,
+                ..Default::default()
+            };
+            let cap = kvm_enable_cap {
+                cap: KVM_CAP_ARM_RME,
+                args: [
+                    KVM_CAP_ARM_RME_INIT_RIPAS_REALM as u64,
+                    &arg as *const _ as u64,
+                    0,
+                    0,
+                ],
+                ..Default::default()
+            };
+
+            self.fd
+                .enable_cap(&cap)
+                .map_err(|e| vm::HypervisorVmError::PopulateRealm(e.into()))
+        }
     }
 
     ///

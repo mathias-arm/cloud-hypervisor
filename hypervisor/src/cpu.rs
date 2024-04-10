@@ -590,4 +590,12 @@ pub trait Vcpu: Send + Sync {
     /// Trigger NMI interrupt
     ///
     fn nmi(&self) -> Result<()>;
+
+    #[cfg(feature = "arm_rme")]
+    ///
+    /// Finalize Arm Realm Execution Context (vCPU)
+    ///
+    fn rec_finalize(&self) -> Result<()> {
+        unimplemented!()
+    }
 }

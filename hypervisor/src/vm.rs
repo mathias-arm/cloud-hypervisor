@@ -131,6 +131,18 @@ pub enum HypervisorVmError {
     #[error("Failed to enable SGX attribute: {0}")]
     EnableSgxAttribute(#[source] anyhow::Error),
     ///
+    /// Failed to create an Arm Realm Descriptor
+    ///
+    #[cfg(feature = "arm_rme")]
+    #[error("Failed to create Realm Descriptor")]
+    CreateRealm(#[source] anyhow::Error),
+    ///
+    /// Activate Realm error
+    ///
+    #[cfg(feature = "arm_rme")]
+    #[error("Failed to activate Realm: {0}")]
+    ActivateRealm(#[source] anyhow::Error),
+    ///
     /// Get clock error
     ///
     #[error("Failed to get clock: {0}")]
@@ -393,6 +405,16 @@ pub trait Vm: Send + Sync + Any {
         _size: u64,
         _measure: bool,
     ) -> Result<()> {
+        unimplemented!()
+    }
+    #[cfg(feature = "arm_rme")]
+    // Configure the Realm and create the Realm Descriptor
+    fn arm_rme_realm_create(&self) -> Result<()> {
+        unimplemented!();
+    }
+    #[cfg(feature = "arm_rme")]
+    /// Finalize the configuration of the Realm
+    fn arm_rme_realm_finalize(&self) -> Result<()> {
         unimplemented!()
     }
     /// Downcast to the underlying hypervisor VM type

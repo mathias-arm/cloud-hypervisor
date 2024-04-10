@@ -130,6 +130,7 @@ pub fn arch_memory_regions() -> Vec<(GuestAddress, usize, RegionType)> {
 }
 
 /// Configures the system and should be called once per vm before starting vcpu threads.
+/// Returns the size of the generated FDT
 #[allow(clippy::too_many_arguments)]
 pub fn configure_system<T: DeviceInfoForFdt + Clone + Debug, S: ::std::hash::BuildHasher>(
     guest_mem: &GuestMemoryMmap,
@@ -143,7 +144,7 @@ pub fn configure_system<T: DeviceInfoForFdt + Clone + Debug, S: ::std::hash::Bui
     gic_device: &Arc<Mutex<dyn Vgic>>,
     numa_nodes: &NumaNodes,
     pmu_supported: bool,
-) -> super::Result<()> {
+) -> super::Result<usize> {
     let fdt_final = fdt::create_fdt(
         guest_mem,
         cmdline,
@@ -163,9 +164,8 @@ pub fn configure_system<T: DeviceInfoForFdt + Clone + Debug, S: ::std::hash::Bui
         fdt::print_fdt(&fdt_final);
     }
 
-    fdt::write_fdt_to_memory(fdt_final, guest_mem).map_err(Error::WriteFdtToMemory)?;
-
-    Ok(())
+    let len = fdt::write_fdt_to_memory(fdt_final, guest_mem).map_err(Error::WriteFdtToMemory)?;
+    Ok(len)
 }
 
 /// Returns the memory address where the initramfs could be loaded.

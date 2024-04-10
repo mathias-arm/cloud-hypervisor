@@ -93,6 +93,13 @@ pub use kvm_bindings::{
     KVM_GUESTDBG_ENABLE, KVM_GUESTDBG_SINGLESTEP, KVM_IRQ_ROUTING_IRQCHIP, KVM_IRQ_ROUTING_MSI,
     KVM_MEM_LOG_DIRTY_PAGES, KVM_MEM_READONLY, KVM_MSI_VALID_DEVID,
 };
+#[cfg(feature = "arm_rme")]
+use kvm_bindings::{
+    kvm_cap_arm_rme_init_ipa_args, kvm_cap_arm_rme_populate_realm_args,
+    KVM_ARM_RME_POPULATE_FLAGS_MEASURE, KVM_ARM_VCPU_REC, KVM_CAP_ARM_RME,
+    KVM_CAP_ARM_RME_ACTIVATE_REALM, KVM_CAP_ARM_RME_CREATE_RD, KVM_CAP_ARM_RME_INIT_IPA_REALM,
+    KVM_CAP_ARM_RME_POPULATE_REALM,
+};
 #[cfg(target_arch = "aarch64")]
 use kvm_bindings::{
     kvm_regs, user_fpsimd_state, user_pt_regs, KVM_GUESTDBG_USE_HW, KVM_NR_SPSR, KVM_REG_ARM64,
@@ -1031,6 +1038,34 @@ impl vm::Vm for KvmVm {
             &data as *const _ as u64,
         )
         .map_err(vm::HypervisorVmError::InitMemRegionTdx)
+    }
+
+    #[cfg(feature = "arm_rme")]
+    // Configure the Realm and create the Realm Descriptor
+    fn arm_rme_realm_create(&self) -> vm::Result<()> {
+        let cap = kvm_enable_cap {
+            cap: KVM_CAP_ARM_RME,
+            args: [KVM_CAP_ARM_RME_CREATE_RD as u64, 0, 0, 0],
+            ..Default::default()
+        };
+        self.fd
+            .enable_cap(&cap)
+            .map_err(|e| vm::HypervisorVmError::CreateRealm(e.into()))
+    }
+
+    ///
+    /// Finalize the configuration of the Realm
+    ///
+    #[cfg(feature = "arm_rme")]
+    fn arm_rme_realm_finalize(&self) -> vm::Result<()> {
+        let cap = kvm_enable_cap {
+            cap: KVM_CAP_ARM_RME,
+            args: [KVM_CAP_ARM_RME_ACTIVATE_REALM as u64, 0, 0, 0],
+            ..Default::default()
+        };
+        self.fd
+            .enable_cap(&cap)
+            .map_err(|e| vm::HypervisorVmError::ActivateRealm(e.into()))
     }
 
     /// Downcast to the underlying KvmVm type

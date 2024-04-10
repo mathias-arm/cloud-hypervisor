@@ -326,6 +326,9 @@ pub enum Error {
 
     #[error("Error creating console devices")]
     CreateConsoleDevices(ConsoleDeviceError),
+
+    #[error("Error logging boot data: {0:?}")]
+    LogBootData(crate::memory_manager::Error),
 }
 pub type Result<T> = result::Result<T, Error>;
 
@@ -962,6 +965,12 @@ impl Vm {
             .read_volatile_from(address, initramfs, size)
             .map_err(|_| Error::InitramfsLoad)?;
 
+        self.memory_manager
+            .lock()
+            .unwrap()
+            .log_boot_data(address, size, true)
+            .map_err(Error::LogBootData)?;
+
         info!("Initramfs loaded: address = 0x{:x}", address.0);
         Ok(arch::InitramfsConfig { address, size })
     }
@@ -988,6 +997,10 @@ impl Vm {
         let mem = uefi_flash.memory();
         arch::aarch64::uefi::load_uefi(mem.deref(), arch::layout::UEFI_START, &mut firmware)
             .map_err(Error::UefiLoad)?;
+        /* TODO: size
+         * memory_manager.lock().unwrap().log_boot_data(arch::layout::UEFI_START, 0, true)
+         *     ,map_err(|e| Error::LogBootData(e))?;
+         */
         Ok(())
     }
 
@@ -1007,7 +1020,26 @@ impl Vm {
                     &mut kernel,
                     None,
                 ) {
-                    Ok(entry_addr) => entry_addr.kernel_load,
+                    Ok(load_result) => {
+                        let file_size = load_result.kernel_load_end - load_result.kernel_load.0;
+                        // Align on the next page. Data from the previous page
+                        // is populated. Note that we use 4kB alignment only at
+                        // the moment because it's what RMM supports.
+                        let bss_addr = (load_result.kernel_load_end + 0xfff) & !0xfff;
+                        let bss_size = load_result.kernel_end - bss_addr;
+                        memory_manager
+                            .lock()
+                            .unwrap()
+                            .log_boot_data(load_result.kernel_load, file_size as usize, true)
+                            .map_err(Error::LogBootData)?;
+                        memory_manager
+                            .lock()
+                            .unwrap()
+                            .log_boot_data(GuestAddress(bss_addr), bss_size as usize, false)
+                            .map_err(Error::LogBootData)?;
+
+                        load_result.kernel_load
+                    }
                     // Try to load the binary as kernel PE file at first.
                     // If failed, retry to load it as UEFI binary.
                     // As the UEFI binary is formatless, it must be the last option to try.

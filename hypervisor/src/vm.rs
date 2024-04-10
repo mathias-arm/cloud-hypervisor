@@ -13,15 +13,11 @@
 use std::any::Any;
 #[cfg(target_arch = "x86_64")]
 use std::fs::File;
-use std::sync::Arc;
 #[cfg(any(target_arch = "aarch64", target_arch = "riscv64"))]
 use std::sync::Mutex;
 
 #[cfg(feature = "sev_snp")]
 use igvm_defs::IGVM_VHS_SNP_ID_BLOCK;
-use thiserror::Error;
-use vmm_sys_util::eventfd::EventFd;
-
 #[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::gic::{Vgic, VgicConfig};
 #[cfg(target_arch = "riscv64")]
@@ -32,6 +28,13 @@ use crate::cpu::Vcpu;
 #[cfg(target_arch = "x86_64")]
 use crate::ClockData;
 use crate::{IoEventAddress, IrqRoutingEntry, UserMemoryRegion};
+#[cfg(feature = "sev_snp")]
+use igvm_defs::IGVM_VHS_SNP_ID_BLOCK;
+
+use std::os::unix::io::RawFd;
+use std::sync::Arc;
+use thiserror::Error;
+use vmm_sys_util::eventfd::EventFd;
 
 ///
 /// I/O events data matches (32 or 64 bits).
@@ -279,6 +282,11 @@ pub enum HypervisorVmError {
     #[cfg(feature = "sev_snp")]
     #[error("Failed to mmap:")]
     MmapToRoot,
+    ///
+    /// Failed to create a guest memfd
+    ///
+    #[error("Failed to create guest memfd: {0}")]
+    CreateGuestMemfd(#[source] anyhow::Error),
 }
 ///
 /// Result type for returning from a function
@@ -478,6 +486,11 @@ pub trait Vm: Send + Sync + Any {
     #[cfg(feature = "sev_snp")]
     fn gain_page_access(&self, _gpa: u64, _size: u32) -> Result<()> {
         Ok(())
+    }
+
+    /// Create a guest memfd
+    fn create_guest_memfd(&self, _size: u64) -> Result<RawFd> {
+        unimplemented!()
     }
 }
 

@@ -1353,7 +1353,7 @@ impl Vm {
                 ))
             })?;
 
-        arch::configure_system(
+        let fdt_len = arch::configure_system(
             &mem,
             cmdline.as_cstring().unwrap().to_str().unwrap(),
             vcpu_mpidrs,
@@ -1367,6 +1367,12 @@ impl Vm {
             pmu_supported,
         )
         .map_err(Error::ConfigureSystem)?;
+
+        self.memory_manager
+            .lock()
+            .unwrap()
+            .log_boot_data(arch::layout::FDT_START, fdt_len, true)
+            .map_err(Error::LogBootData)?;
 
         Ok(())
     }

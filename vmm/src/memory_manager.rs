@@ -1207,10 +1207,12 @@ impl MemoryManager {
             .ok_or(Error::CreateSystemAllocator)?,
         ));
 
-        #[cfg(not(feature = "tdx"))]
+        #[cfg(not(any(feature = "tdx", feature = "arm_rme")))]
         let dynamic = true;
         #[cfg(feature = "tdx")]
         let dynamic = !tdx_enabled;
+        #[cfg(feature = "arm_rme")]
+        let dynamic = !arm_rme_enabled;
 
         let acpi_address = if dynamic
             && config.hotplug_method == HotplugMethod::Acpi
@@ -1262,7 +1264,7 @@ impl MemoryManager {
             guest_ram_mappings: Vec::new(),
             boot_data: BTreeMap::new(),
             acpi_address,
-            log_dirty: dynamic, // Cannot log dirty pages on a TD
+            log_dirty: dynamic, // Cannot log dirty pages on a TD or Realm
             arch_mem_regions,
             ram_allocator,
             dynamic,

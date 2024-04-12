@@ -31,6 +31,7 @@ mod snp_constants;
 pub mod x86_64;
 #[cfg(target_arch = "x86_64")]
 use std::fs::File;
+use std::os::fd::RawFd;
 use std::os::unix::io::AsRawFd;
 
 #[cfg(feature = "sev_snp")]
@@ -1930,6 +1931,7 @@ impl vm::Vm for MshvVm {
         userspace_addr: u64,
         readonly: bool,
         _log_dirty_pages: bool,
+        _guest_memfd: Option<(RawFd, u64)>,
     ) -> UserMemoryRegion {
         let mut flags = 1 << MSHV_SET_MEM_BIT_EXECUTABLE;
         if !readonly {

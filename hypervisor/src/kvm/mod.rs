@@ -2842,7 +2842,7 @@ impl cpu::Vcpu for KvmVcpu {
 
                     Ok(cpu::VmExit::Ignore)
                 }
-                VcpuExit::MemoryFault(flags, gpa, size) => {
+                VcpuExit::MemoryFault { flags, gpa, size } => {
                     let priv_flag = KVM_MEMORY_EXIT_FLAG_PRIVATE as u64;
                     let fault_type = if (flags & priv_flag) != 0 {
                         vm::MemoryFaultType::Private

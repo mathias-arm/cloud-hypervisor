@@ -64,8 +64,8 @@ pub use kvm::{aarch64, GicState};
 pub use kvm::{riscv64, AiaState};
 use std::os::fd::RawFd;
 pub use vm::{
-    DataMatch, HypervisorVmError, InterruptSourceConfig, LegacyIrqSourceConfig, MsiIrqSourceConfig,
-    Vm, VmOps,
+    DataMatch, HypervisorVmError, InterruptSourceConfig, LegacyIrqSourceConfig, MemoryAttribute,
+    MemoryFaultType, MsiIrqSourceConfig, Vm, VmOps,
 };
 
 pub use crate::hypervisor::{Hypervisor, HypervisorError};

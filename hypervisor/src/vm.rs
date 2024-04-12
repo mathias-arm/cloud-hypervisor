@@ -59,6 +59,13 @@ pub enum MemoryAttribute {
     Shared,
 }
 
+/// Indicate the type of the region on which the memory fault occured
+#[derive(Debug)]
+pub enum MemoryFaultType {
+    Private,
+    Shared,
+}
+
 #[derive(Error, Debug)]
 ///
 /// Enum for VM error
@@ -297,6 +304,11 @@ pub enum HypervisorVmError {
     ///
     #[error("Failed to set memory attributes: {0}")]
     SetMemoryAttributes(#[source] anyhow::Error),
+    ///
+    /// Memory Fault error
+    ///
+    #[error("Memory fault error: {0}")]
+    MemoryFaultError(#[source] anyhow::Error),
 }
 ///
 /// Result type for returning from a function
@@ -524,4 +536,5 @@ pub trait VmOps: Send + Sync {
     fn pio_read(&self, port: u64, data: &mut [u8]) -> Result<()>;
     #[cfg(target_arch = "x86_64")]
     fn pio_write(&self, port: u64, data: &[u8]) -> Result<()>;
+    fn memory_fault(&self, fault_type: MemoryFaultType, gpa: u64, size: u64) -> Result<()>;
 }

@@ -2853,6 +2853,21 @@ impl cpu::Vcpu for KvmVcpu {
 
                     Ok(cpu::VmExit::Ignore)
                 }
+                VcpuExit::MemoryFault { flags, gpa, size } => {
+                    let priv_flag = KVM_MEMORY_EXIT_FLAG_PRIVATE as u64;
+                    let fault_type = if (flags & priv_flag) != 0 {
+                        vm::MemoryFaultType::Private
+                    } else {
+                        vm::MemoryFaultType::Shared
+                    };
+                    if let Some(vm_ops) = &self.vm_ops {
+                        return vm_ops
+                            .memory_fault(fault_type, gpa, size)
+                            .map(|_| cpu::VmExit::Ignore)
+                            .map_err(|e| cpu::HypervisorCpuError::RunVcpu(e.into()));
+                    }
+                    Ok(cpu::VmExit::Ignore)
+                }
                 VcpuExit::Hyperv => Ok(cpu::VmExit::Hyperv),
                 #[cfg(feature = "tdx")]
                 VcpuExit::Unsupported(KVM_EXIT_TDX) => Ok(cpu::VmExit::Tdx),

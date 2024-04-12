@@ -2926,7 +2926,7 @@ impl DeviceManager {
         .map_err(DeviceManagerError::NewMmapRegion)?;
         let host_addr: u64 = mmap_region.as_ptr() as u64;
 
-        let mem_slot = self
+        let (mem_slot, _guest_memfd) = self
             .memory_manager
             .lock()
             .unwrap()

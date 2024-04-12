@@ -372,6 +372,7 @@ pub trait Vm: Send + Sync + Any {
     /// Sets the GSI routing table entries, overwriting any previously set
     fn set_gsi_routing(&self, entries: &[IrqRoutingEntry]) -> Result<()>;
     /// Creates a memory region structure that can be used with {create/remove}_user_memory_region
+    #[allow(clippy::too_many_arguments)]
     fn make_user_memory_region(
         &self,
         slot: u32,
@@ -380,6 +381,7 @@ pub trait Vm: Send + Sync + Any {
         userspace_addr: u64,
         readonly: bool,
         log_dirty_pages: bool,
+        guest_memfd: Option<(RawFd, u64)>,
     ) -> UserMemoryRegion;
     /// Creates a guest physical memory slot.
     fn create_user_memory_region(&self, user_memory_region: UserMemoryRegion) -> Result<()>;

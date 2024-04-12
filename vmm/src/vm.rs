@@ -3234,6 +3234,7 @@ pub fn test_vm() {
             region.as_ptr() as u64,
             false,
             false,
+            None,
         );
 
         vm.create_user_memory_region(mem_region)

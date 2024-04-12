@@ -443,6 +443,15 @@ impl VmOps for VmOpsHandler {
         };
         Ok(())
     }
+
+    fn memory_fault(
+        &self,
+        fault_type: hypervisor::MemoryFaultType,
+        gpa: u64,
+        size: u64,
+    ) -> result::Result<(), HypervisorVmError> {
+        todo!();
+    }
 }
 
 pub fn physical_bits(hypervisor: &Arc<dyn hypervisor::Hypervisor>, max_phys_bits: u8) -> u8 {

@@ -6,6 +6,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the THIRD-PARTY file.
 
+use crate::aarch64::PsciMethod;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::fmt::Debug;
@@ -225,6 +226,7 @@ pub fn create_fdt<T: DeviceInfoForFdt + Clone + Debug, S: ::std::hash::BuildHash
     numa_nodes: &NumaNodes,
     virtio_iommu_bdf: Option<u32>,
     pmu_supported: bool,
+    psci_method: PsciMethod,
 ) -> FdtWriterResult<Vec<u8>> {
     // Allocate stuff necessary for the holding the blob.
     let mut fdt = FdtWriter::new().unwrap();
@@ -252,7 +254,7 @@ pub fn create_fdt<T: DeviceInfoForFdt + Clone + Debug, S: ::std::hash::BuildHash
         create_pmu_node(&mut fdt)?;
     }
     create_clock_node(&mut fdt)?;
-    create_psci_node(&mut fdt)?;
+    create_psci_node(&mut fdt, psci_method)?;
     create_devices_node(&mut fdt, device_info)?;
     create_pci_nodes(&mut fdt, pci_space_info, virtio_iommu_bdf)?;
     if numa_nodes.len() > 1 {
@@ -722,14 +724,17 @@ fn create_timer_node(fdt: &mut FdtWriter) -> FdtWriterResult<()> {
     Ok(())
 }
 
-fn create_psci_node(fdt: &mut FdtWriter) -> FdtWriterResult<()> {
+fn create_psci_node(fdt: &mut FdtWriter, method: PsciMethod) -> FdtWriterResult<()> {
     let compatible = "arm,psci-0.2";
     let psci_node = fdt.begin_node("psci")?;
     fdt.property_string("compatible", compatible)?;
     // Two methods available: hvc and smc.
     // As per documentation, PSCI calls between a guest and hypervisor may use the HVC conduit instead of SMC.
     // So, since we are using kvm, we need to use hvc.
-    fdt.property_string("method", "hvc")?;
+    match method {
+        PsciMethod::Hvc => fdt.property_string("method", "hvc")?,
+        PsciMethod::Smc => fdt.property_string("method", "smc")?,
+    }
     fdt.end_node(psci_node)?;
 
     Ok(())

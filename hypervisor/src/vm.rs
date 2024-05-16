@@ -52,6 +52,13 @@ impl From<DataMatch> for u64 {
     }
 }
 
+/// Attribute of guest pages: private to the guest or shared with the host
+#[derive(Debug, PartialEq)]
+pub enum MemoryAttribute {
+    Private,
+    Shared,
+}
+
 #[derive(Error, Debug)]
 ///
 /// Enum for VM error
@@ -285,6 +292,11 @@ pub enum HypervisorVmError {
     ///
     #[error("Failed to create guest memfd: {0}")]
     CreateGuestMemfd(#[source] anyhow::Error),
+    ///
+    /// Failed to set memory attributes
+    ///
+    #[error("Failed to set memory attributes: {0}")]
+    SetMemoryAttributes(#[source] anyhow::Error),
 }
 ///
 /// Result type for returning from a function
@@ -490,6 +502,15 @@ pub trait Vm: Send + Sync + Any {
 
     /// Create a guest memfd
     fn create_guest_memfd(&self, _size: u64) -> Result<RawFd> {
+        unimplemented!()
+    }
+
+    fn set_memory_attributes(
+        &self,
+        _address: u64,
+        _size: u64,
+        _attributes: MemoryAttribute,
+    ) -> Result<()> {
         unimplemented!()
     }
 }

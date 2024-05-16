@@ -100,11 +100,11 @@ use kvm_bindings::{
 pub use kvm_bindings::{
     kvm_clock_data, kvm_create_device, kvm_create_device as CreateDevice, kvm_create_guest_memfd,
     kvm_device_attr as DeviceAttr, kvm_device_type_KVM_DEV_TYPE_VFIO, kvm_enable_cap,
-    kvm_guest_debug, kvm_irq_routing, kvm_irq_routing_entry, kvm_mp_state, kvm_run,
-    kvm_userspace_memory_region, kvm_userspace_memory_region2, KVM_GUESTDBG_ENABLE,
+    kvm_guest_debug, kvm_irq_routing, kvm_irq_routing_entry, kvm_memory_attributes, kvm_mp_state,
+    kvm_run, kvm_userspace_memory_region, kvm_userspace_memory_region2, KVM_GUESTDBG_ENABLE,
     KVM_GUESTDBG_SINGLESTEP, KVM_IRQ_ROUTING_IRQCHIP, KVM_IRQ_ROUTING_MSI,
-    KVM_MEMORY_EXIT_FLAG_PRIVATE, KVM_MEM_GUEST_MEMFD, KVM_MEM_LOG_DIRTY_PAGES, KVM_MEM_READONLY,
-    KVM_MSI_VALID_DEVID,
+    KVM_MEMORY_ATTRIBUTE_PRIVATE, KVM_MEMORY_EXIT_FLAG_PRIVATE, KVM_MEM_GUEST_MEMFD,
+    KVM_MEM_LOG_DIRTY_PAGES, KVM_MEM_READONLY, KVM_MSI_VALID_DEVID,
 };
 #[cfg(target_arch = "aarch64")]
 use kvm_bindings::{
@@ -1265,6 +1265,28 @@ impl vm::Vm for KvmVm {
         self.fd
             .create_guest_memfd(create_guest_memfd)
             .map_err(|e| vm::HypervisorVmError::CreateGuestMemfd(e.into()))
+    }
+
+    fn set_memory_attributes(
+        &self,
+        address: u64,
+        size: u64,
+        attributes: vm::MemoryAttribute,
+    ) -> vm::Result<()> {
+        let attributes_num = if attributes == vm::MemoryAttribute::Private {
+            KVM_MEMORY_ATTRIBUTE_PRIVATE as u64
+        } else {
+            0
+        };
+        let set_memory_attributes = kvm_memory_attributes {
+            address,
+            size,
+            attributes: attributes_num,
+            flags: 0,
+        };
+        self.fd
+            .set_memory_attributes(set_memory_attributes)
+            .map_err(|e| vm::HypervisorVmError::SetMemoryAttributes(e.into()))
     }
 
     /// Downcast to the underlying KvmVm type

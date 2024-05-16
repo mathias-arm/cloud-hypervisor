@@ -60,7 +60,7 @@ pub enum MemoryAttribute {
 }
 
 /// Indicate the type of the region on which the memory fault occured
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum MemoryFaultType {
     Private,
     Shared,

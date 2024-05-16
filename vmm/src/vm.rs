@@ -396,6 +396,7 @@ impl VmState {
 }
 
 struct VmOpsHandler {
+    memory_manager: Arc<Mutex<MemoryManager>>,
     memory: GuestMemoryAtomic<GuestMemoryMmap>,
     #[cfg(target_arch = "x86_64")]
     io_bus: Arc<Bus>,
@@ -469,7 +470,10 @@ impl VmOps for VmOpsHandler {
         gpa: u64,
         size: u64,
     ) -> result::Result<(), HypervisorVmError> {
-        todo!();
+        self.memory_manager
+            .lock()
+            .unwrap()
+            .memory_fault(fault_type, gpa, size)
     }
 }
 
@@ -567,6 +571,7 @@ impl Vm {
         let mmio_bus = Arc::new(Bus::new());
 
         let vm_ops: Arc<dyn VmOps> = Arc::new(VmOpsHandler {
+            memory_manager: memory_manager.clone(),
             memory,
             #[cfg(target_arch = "x86_64")]
             io_bus: io_bus.clone(),

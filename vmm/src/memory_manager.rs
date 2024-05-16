@@ -23,7 +23,6 @@ use arch::x86_64::{SgxEpcRegion, SgxEpcSection};
 use arch::RegionType;
 #[cfg(target_arch = "x86_64")]
 use devices::ioapic;
-#[cfg(target_arch = "aarch64")]
 use hypervisor::HypervisorVmError;
 use libc::_SC_NPROCESSORS_ONLN;
 #[cfg(target_arch = "x86_64")]
@@ -1189,6 +1188,9 @@ impl MemoryManager {
                 let use_guest_memfd = false;
             }
         }
+        if use_guest_memfd && (config.hugepages || config.thp) {
+            warn!("We don't support guest memfd with huge pages at the moment");
+        }
 
         let guest_memory = GuestMemoryAtomic::new(guest_memory);
 
@@ -2343,6 +2345,116 @@ impl MemoryManager {
             }
         }
 
+        Ok(())
+    }
+
+    fn memory_fault_range(
+        &self,
+        fault_type: hypervisor::MemoryFaultType,
+        gpa: u64,
+        size: u64,
+        mapping: &GuestRamMapping,
+    ) -> result::Result<(), HypervisorVmError> {
+        assert!(gpa >= mapping.gpa);
+        let offset = gpa - mapping.gpa;
+        debug!(
+            "Memory fault gpa {:x} size {:x} type {:?} @[gpa {:x} size {:x}]",
+            gpa, size, fault_type, mapping.gpa, mapping.size,
+        );
+        match fault_type {
+            hypervisor::MemoryFaultType::Shared => {
+                // Memory fault occured on a shared memory access
+                self.vm
+                    .set_memory_attributes(gpa, size, hypervisor::MemoryAttribute::Shared)?;
+                let Some(guest_memfd) = self.guest_memfds.get(&mapping.gpa) else {
+                    return Err(HypervisorVmError::MemoryFaultError(anyhow!(
+                        "no memfd found"
+                    )));
+                };
+
+                // Remove the pages from the private guest address space
+                // SAFETY: valid file descriptor
+                let ret = unsafe {
+                    libc::fallocate64(
+                        guest_memfd.as_raw_fd(),
+                        libc::FALLOC_FL_PUNCH_HOLE | libc::FALLOC_FL_KEEP_SIZE,
+                        offset as libc::off64_t,
+                        size as libc::off64_t,
+                    )
+                };
+                if ret != 0 {
+                    let err = anyhow::Error::from(io::Error::last_os_error());
+                    return Err(HypervisorVmError::MemoryFaultError(err));
+                }
+            }
+            hypervisor::MemoryFaultType::Private => {
+                // Memory fault occured on a private memory access
+                self.vm
+                    .set_memory_attributes(gpa, size, hypervisor::MemoryAttribute::Private)?;
+                // Remove the pages from the host address space
+                // TODO: vm_memory should probably do all this. We could call
+                // something like guest_memory.discard(range).
+                // TODO: I don't know if this is correct.
+                let user_addr = self
+                    .guest_memory
+                    .memory()
+                    .get_host_address(GuestAddress(mapping.gpa))
+                    .map_err(|e| HypervisorVmError::MemoryFaultError(anyhow!(e)))?
+                    as u64
+                    + offset;
+
+                let madv_flag = if self
+                    .guest_memory
+                    .memory()
+                    .find_region(GuestAddress(mapping.gpa))
+                    .unwrap()
+                    .file_offset()
+                    .is_some()
+                {
+                    libc::MADV_REMOVE
+                } else {
+                    // If the memory is not backed by a file, use DONTNEED.
+                    // Since we're using anonymous private mappings, the current
+                    // page is discarded and a subsequent access will yeld an
+                    // empty page. Of course the host is not supposed to access
+                    // it now since it's not tied to the guest.
+                    libc::MADV_DONTNEED
+                };
+                // SAFETY: the address and size are valid
+                let ret = unsafe {
+                    libc::madvise(
+                        user_addr as *mut libc::c_void,
+                        size as libc::size_t,
+                        madv_flag,
+                    )
+                };
+                if ret != 0 {
+                    let err = anyhow::Error::from(io::Error::last_os_error());
+                    return Err(HypervisorVmError::MemoryFaultError(err));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Handle a memory fault VM exit. At the moment this is a request to
+    /// switch some memory either private->shared or shared->private.
+    pub fn memory_fault(
+        &mut self,
+        fault_type: hypervisor::MemoryFaultType,
+        gpa: u64,
+        size: u64,
+    ) -> std::result::Result<(), HypervisorVmError> {
+        for mapping in &self.guest_ram_mappings {
+            if mapping.gpa >= gpa + size || mapping.gpa + mapping.size < gpa {
+                continue;
+            }
+
+            // Intersect the fault range with this mapping
+            let base = std::cmp::max(mapping.gpa, gpa);
+            let end = std::cmp::min(mapping.gpa + mapping.size, gpa + size);
+            self.memory_fault_range(fault_type, base, end - base, mapping)?;
+        }
         Ok(())
     }
 }

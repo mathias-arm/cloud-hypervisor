@@ -112,19 +112,13 @@ pub trait Hypervisor: Send + Sync {
     ///
     fn create_vm(&self) -> Result<Arc<dyn Vm>>;
     ///
-    /// Create a Vm of a specific type using the underlying hypervisor
+    /// Create a Vm with specific capabilities using the underlying hypervisor,
+    /// passing memory size.
     /// Return a hypervisor-agnostic Vm trait object
     ///
-    fn create_vm_with_type(&self, _vm_type: u64) -> Result<Arc<dyn Vm>> {
-        unreachable!()
-    }
-    ///
-    /// Create a Vm of a specific type using the underlying hypervisor, passing memory size
-    /// Return a hypervisor-agnostic Vm trait object
-    ///
-    fn create_vm_with_type_and_memory(
+    fn create_vm_with_caps_and_memory(
         &self,
-        _vm_type: u64,
+        _confidential: bool,
         #[cfg(feature = "sev_snp")] _mem_size: u64,
     ) -> Result<Arc<dyn Vm>> {
         unreachable!()

@@ -57,6 +57,8 @@ use tracer::trace_scoped;
 use vm_device::Bus;
 #[cfg(feature = "tdx")]
 use vm_memory::{Address, ByteValued, GuestMemoryRegion, ReadVolatile};
+#[cfg(feature = "arm_rme")]
+use vm_memory::{Address, GuestMemoryRegion};
 use vm_memory::{
     Bytes, GuestAddress, GuestAddressSpace, GuestMemory, GuestMemoryAtomic, WriteVolatile,
 };
@@ -296,6 +298,10 @@ pub enum Error {
     #[cfg(feature = "arm_rme")]
     #[error("Error creating Realm VM: {0}")]
     CreateArmRme(#[source] hypervisor::HypervisorVmError),
+
+    #[cfg(feature = "arm_rme")]
+    #[error("Error populating Realm VM: {0}")]
+    PopulateArmRme(#[source] hypervisor::HypervisorVmError),
 
     #[cfg(feature = "guest_debug")]
     #[error("Error debugging VM: {0:?}")]
@@ -854,7 +860,16 @@ impl Vm {
             arm_rme_enabled,
         )?;
 
-        let phys_bits = physical_bits(&hypervisor, vm_config.lock().unwrap().cpus.max_phys_bits);
+        #[allow(unused_mut)]
+        let mut phys_bits =
+            physical_bits(&hypervisor, vm_config.lock().unwrap().cpus.max_phys_bits);
+
+        #[cfg(feature = "arm_rme")]
+        if arm_rme_enabled {
+            // The top bit of the IPA space distinguishes between shared and
+            // private halves. It's not available fot the memory manager.
+            phys_bits -= 1;
+        }
 
         let memory_manager = if let Some(snapshot) =
             snapshot_from_id(snapshot.as_ref(), MEMORY_MANAGER_SNAPSHOT_ID)
@@ -2221,6 +2236,26 @@ impl Vm {
             self.vm
                 .arm_rme_realm_create()
                 .map_err(Error::CreateArmRme)?;
+
+            let mem = self.memory_manager.lock().unwrap().boot_guest_memory();
+
+            // Initialize the RIPAS of all RAM
+            for (start, size) in mem.iter().map(|m| (m.start_addr().raw_value(), m.len())) {
+                debug!("RME: init RIPAS 0x{:x} size 0x{:x}", start, size);
+                self.vm
+                    .arm_rme_realm_populate(start, size, /* populate */ false)
+                    .map_err(Error::PopulateArmRme)?;
+            }
+
+            for (addr, data) in self.memory_manager.lock().unwrap().boot_data() {
+                debug!(
+                    "RME: init RAM addr 0x{:x} size 0x{:x} populate {}",
+                    addr.0, data.size, data.populate
+                );
+                self.vm
+                    .arm_rme_realm_populate(addr.0, data.size as u64, data.populate)
+                    .map_err(Error::PopulateArmRme)?;
+            }
         }
 
         self.cpu_manager

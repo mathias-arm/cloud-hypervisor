@@ -297,6 +297,10 @@ pub enum Error {
     #[error("Error creating Realm VM: {0}")]
     CreateArmRme(#[source] hypervisor::HypervisorVmError),
 
+    #[cfg(feature = "arm_rme")]
+    #[error("Error populating Realm VM: {0}")]
+    PopulateArmRme(#[source] hypervisor::HypervisorVmError),
+
     #[cfg(feature = "guest_debug")]
     #[error("Error debugging VM: {0:?}")]
     Debug(DebuggableError),
@@ -2233,6 +2237,16 @@ impl Vm {
             self.vm
                 .arm_rme_realm_create()
                 .map_err(Error::CreateArmRme)?;
+
+            for (addr, data) in self.memory_manager.lock().unwrap().boot_data() {
+                debug!(
+                    "RME: init RAM addr 0x{:x} size 0x{:x} populate {}",
+                    addr.0, data.size, data.populate
+                );
+                self.vm
+                    .arm_rme_realm_populate(addr.0, data.size as u64, data.populate)
+                    .map_err(Error::PopulateArmRme)?;
+            }
         }
 
         self.cpu_manager

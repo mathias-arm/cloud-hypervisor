@@ -200,6 +200,10 @@ pub enum Error {
     #[cfg(target_arch = "x86_64")]
     #[error("Failed to inject NMI")]
     NmiError(hypervisor::HypervisorCpuError),
+
+    #[cfg(feature = "arm_rme")]
+    #[error("Failed to finalize REC")]
+    RecFinalize(hypervisor::HypervisorCpuError),
 }
 pub type Result<T> = result::Result<T, Error>;
 
@@ -1349,6 +1353,18 @@ impl CpuManager {
                 .vcpu
                 .tdx_init(hob_address)
                 .map_err(Error::InitializeTdx)?;
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "arm_rme")]
+    pub fn rec_finalize(&self) -> Result<()> {
+        for vcpu in &self.vcpus {
+            vcpu.lock()
+                .unwrap()
+                .vcpu
+                .rec_finalize()
+                .map_err(Error::RecFinalize)?;
         }
         Ok(())
     }

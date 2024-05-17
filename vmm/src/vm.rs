@@ -301,6 +301,10 @@ pub enum Error {
     #[error("Error populating Realm VM: {0}")]
     PopulateArmRme(#[source] hypervisor::HypervisorVmError),
 
+    #[cfg(feature = "arm_rme")]
+    #[error("Error finalizing Realm VM: {0}")]
+    FinalizeArmRme(#[source] hypervisor::HypervisorVmError),
+
     #[cfg(feature = "guest_debug")]
     #[error("Error debugging VM: {0:?}")]
     Debug(DebuggableError),
@@ -2247,6 +2251,16 @@ impl Vm {
                     .arm_rme_realm_populate(addr.0, data.size as u64, data.populate)
                     .map_err(Error::PopulateArmRme)?;
             }
+
+            self.cpu_manager
+                .lock()
+                .unwrap()
+                .rec_finalize()
+                .map_err(Error::CpuManager)?;
+
+            self.vm
+                .arm_rme_realm_finalize()
+                .map_err(Error::FinalizeArmRme)?;
         }
 
         self.cpu_manager

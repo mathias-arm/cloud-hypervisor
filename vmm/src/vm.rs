@@ -38,6 +38,8 @@ use devices::AcpiNotificationFlags;
 use gdbstub_arch::aarch64::reg::AArch64CoreRegs as CoreRegs;
 #[cfg(all(target_arch = "x86_64", feature = "guest_debug"))]
 use gdbstub_arch::x86::reg::X86_64CoreRegs as CoreRegs;
+#[cfg(feature = "arm_rme")]
+use hypervisor::ArmRmeConfig;
 use hypervisor::{HypervisorVmError, VmOps};
 use libc::{termios, SIGWINCH};
 use linux_loader::cmdline::Cmdline;
@@ -2237,8 +2239,19 @@ impl Vm {
 
         #[cfg(feature = "arm_rme")]
         if self.config.lock().unwrap().is_arm_rme_enabled() {
+            let cfg = self.config.lock().unwrap();
+            let arm_rme_config = ArmRmeConfig {
+                measurement_algo: cfg
+                    .platform
+                    .as_ref()
+                    .and_then(|p| p.measurement_algo.as_deref()),
+                personalization_value: cfg
+                    .platform
+                    .as_ref()
+                    .and_then(|p| p.personalization_value.as_deref()),
+            };
             self.vm
-                .arm_rme_realm_create()
+                .arm_rme_realm_create(&arm_rme_config)
                 .map_err(Error::CreateArmRme)?;
 
             let mem = self.memory_manager.lock().unwrap().boot_guest_memory();

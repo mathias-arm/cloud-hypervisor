@@ -131,6 +131,12 @@ pub enum HypervisorVmError {
     #[error("Failed to enable SGX attribute: {0}")]
     EnableSgxAttribute(#[source] anyhow::Error),
     ///
+    /// Failed to configure the Realm
+    ///
+    #[cfg(feature = "arm_rme")]
+    #[error("Failed to configure the Realm")]
+    ConfigRealm(#[source] anyhow::Error),
+    ///
     /// Failed to create an Arm Realm Descriptor
     ///
     #[cfg(feature = "arm_rme")]
@@ -312,6 +318,14 @@ pub enum InterruptSourceConfig {
     MsiIrq(MsiIrqSourceConfig),
 }
 
+/// Configuration of a confidential VM on Arm
+#[cfg(feature = "arm_rme")]
+#[derive(Debug)]
+pub struct ArmRmeConfig<'a> {
+    pub measurement_algo: Option<&'a str>,
+    pub personalization_value: Option<&'a str>,
+}
+
 ///
 /// Trait to represent a Vm
 ///
@@ -415,7 +429,7 @@ pub trait Vm: Send + Sync + Any {
     }
     #[cfg(feature = "arm_rme")]
     // Configure the Realm and create the Realm Descriptor
-    fn arm_rme_realm_create(&self) -> Result<()> {
+    fn arm_rme_realm_create(&self, _realm_config: &ArmRmeConfig) -> Result<()> {
         unimplemented!();
     }
     #[cfg(feature = "arm_rme")]

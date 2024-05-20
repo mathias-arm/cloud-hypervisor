@@ -975,6 +975,7 @@ dependencies = [
  "cfg-if",
  "concat-idents",
  "env_logger",
+ "hex",
  "iced-x86",
  "igvm",
  "igvm_defs",

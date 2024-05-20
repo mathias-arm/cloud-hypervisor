@@ -11,11 +11,12 @@ mshv = ["mshv-bindings", "mshv-ioctls", "mshv_emulator", "vfio-ioctls/mshv"]
 mshv_emulator = ["iced-x86", "mshv-bindings"]
 sev_snp = ["igvm", "igvm_defs"]
 tdx = []
-arm_rme = []
+arm_rme = ["base64"]
 
 [dependencies]
 anyhow = "1.0.94"
 arc-swap = "1.7.1"
+base64 = { version = "0.22.1", optional = true }
 byteorder = "1.5.0"
 cfg-if = "1.0.0"
 concat-idents = "1.1.5"

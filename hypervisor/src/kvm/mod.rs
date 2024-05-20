@@ -23,6 +23,8 @@ use std::result;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
+#[cfg(feature = "arm_rme")]
+use base64::{engine::general_purpose::STANDARD as base64, Engine as _};
 use kvm_ioctls::{NoDatamatch, VcpuFd, VmFd};
 use vmm_sys_util::eventfd::EventFd;
 
@@ -78,6 +80,8 @@ pub mod aarch64;
 // riscv64 dependencies
 #[cfg(target_arch = "riscv64")]
 pub mod riscv64;
+#[cfg(feature = "arm_rme")]
+use crate::ArmRmeConfig;
 #[cfg(target_arch = "aarch64")]
 use std::mem;
 
@@ -88,9 +92,11 @@ use std::mem;
 pub use kvm_bindings::kvm_vcpu_events as VcpuEvents;
 #[cfg(feature = "arm_rme")]
 use kvm_bindings::{
-    kvm_cap_arm_rme_init_ipa_args, kvm_cap_arm_rme_populate_realm_args, KVM_ARM_VCPU_REC,
-    KVM_CAP_ARM_RME, KVM_CAP_ARM_RME_ACTIVATE_REALM, KVM_CAP_ARM_RME_CREATE_RD,
-    KVM_CAP_ARM_RME_INIT_IPA_REALM, KVM_CAP_ARM_RME_POPULATE_REALM,
+    arm_rme_config, arm_rme_init_ripas, arm_rme_populate_realm, ARM_RME_CONFIG_HASH_ALGO,
+    ARM_RME_CONFIG_MEASUREMENT_ALGO_SHA256, ARM_RME_CONFIG_MEASUREMENT_ALGO_SHA512,
+    ARM_RME_CONFIG_RPV, ARM_RME_CONFIG_RPV_SIZE, KVM_ARM_VCPU_REC, KVM_CAP_ARM_RME,
+    KVM_CAP_ARM_RME_ACTIVATE_REALM, KVM_CAP_ARM_RME_CONFIG_REALM, KVM_CAP_ARM_RME_CREATE_REALM,
+    KVM_CAP_ARM_RME_INIT_RIPAS_REALM, KVM_CAP_ARM_RME_POPULATE_REALM,
 };
 pub use kvm_bindings::{
     kvm_clock_data, kvm_create_device, kvm_create_device as CreateDevice,
@@ -1044,7 +1050,77 @@ impl vm::Vm for KvmVm {
 
     #[cfg(feature = "arm_rme")]
     // Configure the Realm and create the Realm Descriptor
-    fn arm_rme_realm_create(&self) -> vm::Result<()> {
+    fn arm_rme_realm_create(&self, realm_config: &ArmRmeConfig) -> vm::Result<()> {
+        if let Some(rpv) = realm_config.personalization_value {
+            let rpv_bytes = base64
+                .decode(rpv)
+                .map_err(|e| vm::HypervisorVmError::ConfigRealm(e.into()))?;
+
+            if rpv_bytes.len() != ARM_RME_CONFIG_RPV_SIZE as usize {
+                return Err(vm::HypervisorVmError::ConfigRealm(anyhow!(
+                    "invalid RPV length"
+                )));
+            }
+
+            let mut cfg = arm_rme_config {
+                cfg: ARM_RME_CONFIG_RPV,
+                ..Default::default()
+            };
+            // Fill the first few bytes. The RPV is zero-padded on the right
+            for (i, b) in rpv_bytes.into_iter().enumerate() {
+                // SAFETY: accessing a union field in a valid structure
+                unsafe {
+                    cfg.__bindgen_anon_1.__bindgen_anon_1.rpv[i] = b;
+                }
+            }
+
+            let cap = kvm_enable_cap {
+                cap: KVM_CAP_ARM_RME,
+                args: [
+                    KVM_CAP_ARM_RME_CONFIG_REALM as u64,
+                    &cfg as *const _ as u64,
+                    0,
+                    0,
+                ],
+                ..Default::default()
+            };
+            self.fd
+                .enable_cap(&cap)
+                .map_err(|e| vm::HypervisorVmError::ConfigRealm(e.into()))?
+        }
+
+        let algo = match &realm_config.measurement_algo {
+            Some("sha256") => ARM_RME_CONFIG_MEASUREMENT_ALGO_SHA256,
+            Some("sha512") => ARM_RME_CONFIG_MEASUREMENT_ALGO_SHA512,
+            Some(_) => {
+                return Err(vm::HypervisorVmError::ConfigRealm(anyhow!(
+                    "Unsupported hash algorithm"
+                )))
+            }
+            // Pick a default algorithm to make the life of verifiers easier
+            None => ARM_RME_CONFIG_MEASUREMENT_ALGO_SHA512,
+        };
+
+        let mut cfg = arm_rme_config {
+            cfg: ARM_RME_CONFIG_HASH_ALGO,
+            ..Default::default()
+        };
+        cfg.__bindgen_anon_1.__bindgen_anon_2.hash_algo = algo;
+
+        let cap = kvm_enable_cap {
+            cap: KVM_CAP_ARM_RME,
+            args: [
+                KVM_CAP_ARM_RME_CONFIG_REALM as u64,
+                &cfg as *const _ as u64,
+                0,
+                0,
+            ],
+            ..Default::default()
+        };
+        self.fd
+            .enable_cap(&cap)
+            .map_err(|e| vm::HypervisorVmError::ConfigRealm(e.into()))?;
+
         let cap = kvm_enable_cap {
             cap: KVM_CAP_ARM_RME,
             args: [KVM_CAP_ARM_RME_CREATE_REALM as u64, 0, 0, 0],

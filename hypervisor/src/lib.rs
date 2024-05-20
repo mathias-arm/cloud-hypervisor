@@ -69,6 +69,9 @@ pub use vm::{
 
 pub use crate::hypervisor::{Hypervisor, HypervisorError};
 
+#[cfg(feature = "arm_rme")]
+pub use vm::ArmRmeConfig;
+
 #[derive(Debug, Copy, Clone)]
 pub enum HypervisorType {
     #[cfg(feature = "kvm")]

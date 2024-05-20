@@ -116,6 +116,12 @@ pub struct PlatformConfig {
     #[cfg(feature = "arm_rme")]
     #[serde(default)]
     pub arm_rme: bool,
+    #[cfg(feature = "arm_rme")]
+    #[serde(default)]
+    pub measurement_algo: Option<String>,
+    #[cfg(feature = "arm_rme")]
+    #[serde(default)]
+    pub personalization_value: Option<String>,
 }
 
 pub const DEFAULT_PCI_SEGMENT_APERTURE_WEIGHT: u32 = 1;

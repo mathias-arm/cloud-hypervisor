@@ -516,6 +516,8 @@ pub struct VmParams<'a> {
     pub host_data: Option<&'a str>,
     pub landlock_enable: bool,
     pub landlock_rules: Option<Vec<&'a str>>,
+    #[cfg(feature = "arm_rme")]
+    pub dtb: Option<&'a str>,
 }
 
 impl<'a> VmParams<'a> {
@@ -588,6 +590,8 @@ impl<'a> VmParams<'a> {
             .get_many::<String>("landlock-rules")
             .map(|x| x.map(|y| y as &str).collect());
 
+        #[cfg(feature = "arm_rme")]
+        let dtb = args.get_one::<String>("dtb").map(|x| x as &str);
         VmParams {
             cpus,
             memory,
@@ -629,6 +633,8 @@ impl<'a> VmParams<'a> {
             host_data,
             landlock_enable,
             landlock_rules,
+            #[cfg(feature = "arm_rme")]
+            dtb,
         }
     }
 }
@@ -2954,6 +2960,8 @@ impl VmConfig {
                 igvm: vm_params.igvm.map(PathBuf::from),
                 #[cfg(feature = "sev_snp")]
                 host_data: vm_params.host_data.map(|s| s.to_string()),
+                #[cfg(feature = "arm_rme")]
+                dtb: vm_params.dtb.map(|s| s.to_string()),
             })
         } else {
             None
@@ -4107,6 +4115,8 @@ mod tests {
                 host_data: Some(
                     "243eb7dc1a21129caa91dcbb794922b933baecb5823a377eb431188673288c07".to_string(),
                 ),
+                #[cfg(feature = "arm_rme")]
+                dtb: None,
             }),
             rate_limit_groups: None,
             disks: None,

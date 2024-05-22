@@ -345,6 +345,10 @@ pub enum Error {
 
     #[error("Error logging boot data: {0:?}")]
     LogBootData(crate::memory_manager::Error),
+
+    #[cfg(feature = "arm_rme")]
+    #[error("Cannot open DTB file: {0}")]
+    DtbFile(#[source] io::Error),
 }
 pub type Result<T> = result::Result<T, Error>;
 
@@ -503,6 +507,8 @@ pub struct Vm {
     hypervisor: Arc<dyn hypervisor::Hypervisor>,
     stop_on_boot: bool,
     load_payload_handle: Option<thread::JoinHandle<Result<EntryPoint>>>,
+    #[cfg(feature = "arm_rme")]
+    dtb: Option<File>,
 }
 
 impl Vm {
@@ -704,6 +710,17 @@ impl Vm {
             .transpose()
             .map_err(Error::InitramfsFile)?;
 
+        #[cfg(feature = "arm_rme")]
+        let dtb = config
+            .lock()
+            .unwrap()
+            .payload
+            .as_ref()
+            .map(|p| p.dtb.as_ref().map(File::open))
+            .unwrap_or_default()
+            .transpose()
+            .map_err(Error::DtbFile)?;
+
         #[cfg(target_arch = "x86_64")]
         let saved_clock = if let Some(snapshot) = snapshot.as_ref() {
             let vm_snapshot = get_vm_snapshot(snapshot).map_err(Error::Restore)?;
@@ -735,6 +752,8 @@ impl Vm {
             hypervisor,
             stop_on_boot,
             load_payload_handle,
+            #[cfg(feature = "arm_rme")]
+            dtb,
         })
     }
 
@@ -1432,6 +1451,8 @@ impl Vm {
             &self.numa_nodes,
             pmu_supported,
             psci_method,
+            #[cfg(feature = "arm_rme")]
+            &mut self.dtb,
         )
         .map_err(Error::ConfigureSystem)?;
 

@@ -14,6 +14,8 @@ pub mod uefi;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
+#[cfg(feature = "arm_rme")]
+use std::{fs::File, io::Read};
 
 use hypervisor::arch::aarch64::gic::Vgic;
 use log::{log_enabled, Level};
@@ -150,22 +152,33 @@ pub fn configure_system<T: DeviceInfoForFdt + Clone + Debug, S: ::std::hash::Bui
     numa_nodes: &NumaNodes,
     pmu_supported: bool,
     psci_method: PsciMethod,
+    #[cfg(feature = "arm_rme")] dtb: &mut Option<File>,
 ) -> super::Result<usize> {
-    let fdt_final = fdt::create_fdt(
-        guest_mem,
-        cmdline,
-        vcpu_mpidr,
-        vcpu_topology,
-        device_info,
-        gic_device,
-        initrd,
-        pci_space_info,
-        numa_nodes,
-        virtio_iommu_bdf,
-        pmu_supported,
-        psci_method,
-    )
-    .map_err(|_| Error::SetupFdt)?;
+    let mut fdt_final = vec![];
+
+    #[cfg(feature = "arm_rme")]
+    if let Some(ref mut dtb) = dtb {
+        dtb.read_to_end(&mut fdt_final)
+            .map_err(|_| Error::SetupFdt)?;
+    }
+
+    if fdt_final.is_empty() {
+        fdt_final = fdt::create_fdt(
+            guest_mem,
+            cmdline,
+            vcpu_mpidr,
+            vcpu_topology,
+            device_info,
+            gic_device,
+            initrd,
+            pci_space_info,
+            numa_nodes,
+            virtio_iommu_bdf,
+            pmu_supported,
+            psci_method,
+        )
+        .map_err(|_| Error::SetupFdt)?;
+    }
 
     if log_enabled!(Level::Debug) {
         fdt::print_fdt(&fdt_final);

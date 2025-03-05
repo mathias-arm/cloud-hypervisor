@@ -1195,17 +1195,14 @@ impl hypervisor::Hypervisor for KvmHypervisor {
             vm_type = KVM_X86_DEFAULT_VM as u64;
         }
 
+        #[cfg(target_arch = "aarch64")]
+        let confidential = vm_type == KVM_VM_TYPE_ARM_REALM;
+
         // When KVM supports Cap::ArmVmIPASize, it is better to get the IPA
         // size from the host and use that when creating the VM, which may
         // avoid unnecessary VM creation failures.
         #[cfg(target_arch = "aarch64")]
         {
-            vm_type = if confidential {
-                KVM_VM_TYPE_ARM_REALM
-            } else {
-                KVM_VM_TYPE_ARM_NORMAL
-            };
-
             if self.kvm.check_extension(Cap::ArmVmIPASize) {
                 let mut ipa_size: u64 = self.kvm.get_host_ipa_limit().try_into().unwrap();
                 // FIXME: RMM doesn't support 52-bit at the moment, and we can't discover that
@@ -1263,6 +1260,7 @@ impl hypervisor::Hypervisor for KvmHypervisor {
             Ok(Arc::new(KvmVm {
                 fd: vm_fd,
                 dirty_log_slots: Arc::new(RwLock::new(HashMap::new())),
+                #[cfg(target_arch = "aarch64")]
                 arm_rme_enabled: confidential,
             }))
         }

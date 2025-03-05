@@ -63,7 +63,6 @@ pub use kvm::{aarch64, GicState};
 #[cfg(all(feature = "kvm", target_arch = "riscv64"))]
 pub use kvm::{riscv64, AiaState};
 use std::os::fd::RawFd;
-use std::sync::Arc;
 pub use vm::{
     DataMatch, HypervisorVmError, InterruptSourceConfig, LegacyIrqSourceConfig, MsiIrqSourceConfig,
     Vm, VmOps,

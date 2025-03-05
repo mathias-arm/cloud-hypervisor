@@ -88,7 +88,8 @@ use crate::ArmRmeConfig;
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 pub use kvm_bindings::kvm_vcpu_events as VcpuEvents;
 pub use kvm_bindings::{
-    kvm_clock_data, kvm_create_device, kvm_create_guest_memfd, kvm_device_type_KVM_DEV_TYPE_VFIO,
+    kvm_clock_data, kvm_create_device, kvm_create_device as CreateDevice,
+    kvm_device_attr as DeviceAttr, kvm_create_guest_memfd, kvm_device_type_KVM_DEV_TYPE_VFIO,
     kvm_enable_cap, kvm_guest_debug, kvm_irq_routing, kvm_irq_routing_entry, kvm_mp_state,
     kvm_userspace_memory_region, kvm_userspace_memory_region2, KVM_GUESTDBG_ENABLE,
     KVM_GUESTDBG_SINGLESTEP, KVM_IRQ_ROUTING_IRQCHIP, KVM_IRQ_ROUTING_MSI,

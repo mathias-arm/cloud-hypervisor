@@ -13,15 +13,11 @@
 use std::any::Any;
 #[cfg(target_arch = "x86_64")]
 use std::fs::File;
-use std::sync::Arc;
 #[cfg(any(target_arch = "aarch64", target_arch = "riscv64"))]
 use std::sync::Mutex;
 
 #[cfg(feature = "sev_snp")]
 use igvm_defs::IGVM_VHS_SNP_ID_BLOCK;
-use thiserror::Error;
-use vmm_sys_util::eventfd::EventFd;
-
 #[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::gic::{Vgic, VgicConfig};
 #[cfg(target_arch = "riscv64")]
@@ -34,13 +30,9 @@ use crate::ClockData;
 use crate::{IoEventAddress, IrqRoutingEntry, UserMemoryRegion};
 #[cfg(feature = "sev_snp")]
 use igvm_defs::IGVM_VHS_SNP_ID_BLOCK;
-use std::any::Any;
-#[cfg(target_arch = "x86_64")]
-use std::fs::File;
+
 use std::os::unix::io::RawFd;
 use std::sync::Arc;
-#[cfg(target_arch = "aarch64")]
-use std::sync::Mutex;
 use thiserror::Error;
 use vmm_sys_util::eventfd::EventFd;
 

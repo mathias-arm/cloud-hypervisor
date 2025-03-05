@@ -82,7 +82,6 @@ pub mod riscv64;
 use std::mem;
 #[cfg(feature = "arm_rme")]
 use crate::ArmRmeConfig;
-pub use kvm_bindings;
 
 ///
 /// Export generically-named wrappers of kvm-bindings for Unix-based platforms
@@ -97,7 +96,7 @@ pub use kvm_bindings::{
     KVM_MEM_LOG_DIRTY_PAGES, KVM_MEM_READONLY, KVM_MSI_VALID_DEVID,
 };
 #[cfg(feature = "arm_rme")]
-use kvm_bindings::{
+pub use kvm_bindings::{
     kvm_cap_arm_rme_config_item, kvm_cap_arm_rme_init_ipa_args,
     kvm_cap_arm_rme_populate_realm_args, KVM_ARM_RME_POPULATE_FLAGS_MEASURE, KVM_ARM_VCPU_REC,
     KVM_CAP_ARM_RME, KVM_CAP_ARM_RME_ACTIVATE_REALM, KVM_CAP_ARM_RME_CFG_HASH_ALGO,
@@ -107,7 +106,7 @@ use kvm_bindings::{
     KVM_CAP_ARM_RME_RPV_SIZE,
 };
 #[cfg(target_arch = "aarch64")]
-use kvm_bindings::{
+pub use kvm_bindings::{
     kvm_regs, user_fpsimd_state, user_pt_regs, KVM_GUESTDBG_USE_HW, KVM_NR_SPSR, KVM_REG_ARM64,
     KVM_REG_ARM64_SYSREG, KVM_REG_ARM64_SYSREG_CRM_MASK, KVM_REG_ARM64_SYSREG_CRN_MASK,
     KVM_REG_ARM64_SYSREG_OP0_MASK, KVM_REG_ARM64_SYSREG_OP1_MASK, KVM_REG_ARM64_SYSREG_OP2_MASK,

@@ -2949,7 +2949,7 @@ impl cpu::Vcpu for KvmVcpu {
                     arm64_core_reg_id!(KVM_REG_SIZE_U64, pstate),
                     &PSTATE_FAULT_BITS_64.to_le_bytes(),
                 )
-                .map_err(|e| cpu::HypervisorCpuError::SetCoreRegister(e.into()))?;
+                .map_err(|e| cpu::HypervisorCpuError::SetAarchCoreRegister(e.into()))?;
         }
 
         // Other vCPUs are powered off initially awaiting PSCI wakeup.

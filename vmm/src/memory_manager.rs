@@ -968,7 +968,9 @@ impl MemoryManager {
             uefi_region.as_ptr() as u64,
             false,
             false,
-            self.guest_memfd.map(|fd| (fd, 0)),
+            // FIXME
+            // self.guest_memfd.map(|fd| (fd, 0)),
+            None,
         );
         self.vm
             .create_user_memory_region(uefi_mem_region)
@@ -1756,7 +1758,9 @@ impl MemoryManager {
             userspace_addr,
             readonly,
             log_dirty,
-            self.guest_memfd.map(|fd| (fd, ram_offset)),
+            // FIXME
+            // self.guest_memfd.map(|fd| (fd, ram_offset)),
+            None
         );
 
         info!(

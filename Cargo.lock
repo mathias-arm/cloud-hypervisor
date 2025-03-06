@@ -1099,7 +1099,7 @@ dependencies = [
 [[package]]
 name = "kvm-bindings"
 version = "0.11.0"
-source = "git+https://github.com/mathias-arm/kvm.git?branch=cca#cac94be2197e39ec00e73e528cae32e90ab6cb59"
+source = "git+https://github.com/mathias-arm/kvm.git?branch=cca#f34d77397ec7fb2fd24d5ab24c511b7ed9382070"
 dependencies = [
  "serde",
  "vmm-sys-util",
@@ -1179,8 +1179,7 @@ dependencies = [
 [[package]]
 name = "linux-loader"
 version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "870c3814345f050991f99869417779f6062542bcf4ed81db7a1b926ad1306638"
+source = "git+https://github.com/mathias-arm/linux-loader.git?branch=cca#64eb6dbf250384eb7017d909cae7ed6ae7139f62"
 dependencies = [
  "vm-memory",
 ]

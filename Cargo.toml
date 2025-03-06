@@ -124,4 +124,4 @@ vmm-sys-util = "0.12.1"
 [patch.crates-io]
 kvm-bindings = { git = "https://github.com/mathias-arm/kvm.git", package="kvm-bindings", branch = "cca" }
 kvm-ioctls = { git = "https://github.com/mathias-arm/kvm.git", package="kvm-ioctls", branch = "cca" }
-# linux-loader = { git = "https://git.codelinaro.org/linaro/dcap/rust-vmm/linux-loader.git", branch = "cca/v2" }
+linux-loader = { git = "https://github.com/mathias-arm/linux-loader.git", branch = "cca" }

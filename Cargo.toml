@@ -51,12 +51,12 @@ vmm-sys-util = { workspace = true }
 zbus = { version = "4.4.0", optional = true }
 
 [patch.crates-io]
-kvm-bindings = { git = "https://git.codelinaro.org/linaro/dcap/rust-vmm/kvm.git", package="kvm-bindings", branch = "main" }
-kvm-ioctls = { git = "https://git.codelinaro.org/linaro/dcap/rust-vmm/kvm.git", package="kvm-ioctls", branch = "main" }
+kvm-bindings = { git = "https://github.com/mathias-arm/kvm.git", package="kvm-bindings", branch = "cca/v7" }
+kvm-ioctls = { git = "https://github.com/mathias-arm/kvm.git", package="kvm-ioctls", branch = "cca/v7" }
 
 [patch."https://github.com/rust-vmm/vfio"]
-vfio-bindings = { git = "https://github.com/mathias-arm/vfio", branch = "cca" }
-vfio-ioctls = { git = "https://github.com/mathias-arm/vfio", branch = "cca" }
+vfio-bindings = { git = "https://github.com/mathias-arm/vfio", branch = "cca/v7" }
+vfio-ioctls = { git = "https://github.com/mathias-arm/vfio", branch = "cca/v7" }
 
 [dev-dependencies]
 dirs = "6.0.0"
@@ -112,7 +112,7 @@ members = [
 [workspace.dependencies]
 acpi_tables = { git = "https://github.com/rust-vmm/acpi_tables", branch = "main" }
 kvm-bindings = "0.11.0"
-kvm-ioctls = "0.20.0"
+kvm-ioctls = "0.21.0"
 linux-loader = "0.13.0"
 mshv-bindings = "0.3.3"
 mshv-ioctls = "0.3.3"

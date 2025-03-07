@@ -1097,8 +1097,8 @@ dependencies = [
 
 [[package]]
 name = "kvm-bindings"
-version = "0.11.0"
-source = "git+https://git.codelinaro.org/linaro/dcap/rust-vmm/kvm.git?branch=main#885596d3beddc5e10d8ccdc2f3b51e95bb4e3b46"
+version = "0.11.1"
+source = "git+https://github.com/mathias-arm/kvm.git?branch=cca/v7#43496534f2f0195ad675bc875e6f73988091f3d2"
 dependencies = [
  "serde",
  "vmm-sys-util",
@@ -1107,8 +1107,8 @@ dependencies = [
 
 [[package]]
 name = "kvm-ioctls"
-version = "0.20.0"
-source = "git+https://git.codelinaro.org/linaro/dcap/rust-vmm/kvm.git?branch=main#885596d3beddc5e10d8ccdc2f3b51e95bb4e3b46"
+version = "0.21.0"
+source = "git+https://github.com/mathias-arm/kvm.git?branch=cca/v7#43496534f2f0195ad675bc875e6f73988091f3d2"
 dependencies = [
  "bitflags 2.6.0",
  "kvm-bindings",
@@ -2249,7 +2249,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vfio-bindings"
 version = "0.4.0"
-source = "git+https://github.com/mathias-arm/vfio?branch=cca#7b1c271b7ca9ec0aa169b71b7f8f0f94117cfd02"
+source = "git+https://github.com/mathias-arm/vfio?branch=cca/v7#a3572f5d59f0e380c3ee4621f29d944ce3a5c5bd"
 dependencies = [
  "vmm-sys-util",
 ]
@@ -2257,7 +2257,7 @@ dependencies = [
 [[package]]
 name = "vfio-ioctls"
 version = "0.2.0"
-source = "git+https://github.com/mathias-arm/vfio?branch=cca#7b1c271b7ca9ec0aa169b71b7f8f0f94117cfd02"
+source = "git+https://github.com/mathias-arm/vfio?branch=cca/v7#a3572f5d59f0e380c3ee4621f29d944ce3a5c5bd"
 dependencies = [
  "byteorder",
  "kvm-bindings",
